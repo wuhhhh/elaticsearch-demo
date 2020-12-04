@@ -6,12 +6,15 @@
  */
 package com.zoina.search.service.impl;
 
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.ExcelReader;
+import com.alibaba.excel.read.metadata.ReadSheet;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zoina.search.dao.ExcelMapper;
 import com.zoina.search.entity.ExcelEntity;
+import com.zoina.search.entity.ImportExcelListener;
 import com.zoina.search.service.ExcelService;
-import com.zoina.search.utils.ExcelUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -28,7 +31,7 @@ import java.util.Map;
  * @data: 2020-04-17 13:49
  **/
 @Service
-public class ExcelServiceImpl extends ServiceImpl<ExcelMapper,ExcelEntity> implements ExcelService {
+public class ExcelServiceImpl extends ServiceImpl<ExcelMapper, ExcelEntity> implements ExcelService {
 
     @Resource
     private ExcelMapper excelMapper;
@@ -36,23 +39,39 @@ public class ExcelServiceImpl extends ServiceImpl<ExcelMapper,ExcelEntity> imple
     @Override
     public Boolean importExcelRecord(InputStream inputStream) {
         int res = 0;
+
+        ImportExcelListener<ExcelEntity> listener = new ImportExcelListener<>();
+//        EasyExcel.read(inputStream, ExcelEntity.class, listener).doReadAll();
+//        Map<String, List<ExcelEntity>> map = listener.getMap();
+        //Map<String, List<Map<Object, Object>>> listMap = listener.getMap();
+        ExcelReader excelReader = null;
+
         try {
-                List<List<ExcelEntity>> list = ExcelUtils.excelToShopIdList(inputStream);
-                if(0 == list.size()){
-                    return null;
+            excelReader = EasyExcel.read(inputStream).build();
+            // 这里为了简单 所以注册了 同样的head 和Listener 自己使用功能必须不同的Listener
+            ReadSheet readSheet1 =
+                    EasyExcel.readSheet(0).head(ExcelEntity.class).registerReadListener(listener).build();
+            // 这里注意 一定要把sheet1 sheet2 一起传进去，不然有个问题就是03版的excel 会读取多次，浪费性能
+            ExcelReader read = excelReader.read(readSheet1);
+            Map<String, List<ExcelEntity>> map = listener.getMap();
+            for (List<ExcelEntity> excelEntities : map.values()) {
+
+                for (ExcelEntity excelEntity : excelEntities) {
+                    System.out.println("\n" + excelEntity + "\n");
+                    res = excelMapper.insert(excelEntity);
                 }
-                //和单条插入的执行对比了一下，在1000条数据级别内，差别不大，批量操作的优势可能大数据环境下才能显现
-                for (List<ExcelEntity> elist : list) {
-                    for(ExcelEntity entity:elist){
-                        System.out.println(entity);
-                        res = excelMapper.insert(entity);
-                    }
-                }
-        }catch (Exception e){
+            }
+        } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if (excelReader != null) {
+                // 这里千万别忘记关闭，读的时候会创建临时文件，到时磁盘会崩的
+                excelReader.finish();
+            }
+            return res != 0;
         }
 
-        return res != 0;
+
     }
 
     @Override
@@ -62,3 +81,5 @@ public class ExcelServiceImpl extends ServiceImpl<ExcelMapper,ExcelEntity> imple
         return list;
     }
 }
+
+

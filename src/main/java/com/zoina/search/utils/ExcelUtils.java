@@ -7,6 +7,7 @@
 package com.zoina.search.utils;
 
 import com.zoina.search.entity.ExcelEntity;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -65,7 +66,7 @@ public class ExcelUtils {
             //workbook = WorkbookFactory.create(inputStream);
             //inputStream.close();
 
-            for (int i = 1; i < 6; i++) {
+            for (int i = 0; i < 6; i++) {
 
                 xssfWorkbook.getSheetAt(i);
                 // 获取第i页数据
@@ -81,6 +82,16 @@ public class ExcelUtils {
 
                     // 获取第j行数据
                     XSSFRow xssfRow = xssfSheet.getRow(j);
+
+                    if(j>1){
+                        //去掉标题 ，遇到空行直接跳过
+                        if(null == xssfRow){
+                            continue;
+                        }
+                    }
+//                    System.out.println(xssfRow.getCell(2));
+//                    System.out.println(xssfRow.getCell(2)==null);
+//                    System.out.println(xssfRow.getCell(2).toString().equals(""));
                     int colLength = xssfRow.getLastCellNum();
                     jiFenExcel = new ExcelEntity();
                     for (int k = 0; k < colLength; k++) {
@@ -92,11 +103,19 @@ public class ExcelUtils {
                             CellType typeEnum = xssfRow.getCell(k).getCellTypeEnum();
                             if (CellType.NUMERIC == xssfRow.getCell(k).getCellTypeEnum()) {
                                 data = sdf.format(xssfRow.getCell(k).getDateCellValue());
-                            } else {
-                                data = xssfRow.getCell(k).getStringCellValue().trim();
+
                             }
+
+                            else {
+                                xssfRow.getCell(k).setCellType(CellType.STRING);
+                                data = xssfRow.getCell(k).getStringCellValue().trim();
+
+                            }
+
                             if (k == 2) {
+
                                 jiFenExcel.setSortName(data);
+
                             } else if (k == 3) {
                                 jiFenExcel.setDescription(data);
                             } else if (k == 4) {
@@ -105,8 +124,15 @@ public class ExcelUtils {
                                 jiFenExcel.setSourceArea(data);
                             } else if (k == 6) {
                                 System.out.println(num);
-                                Date d = xssfRow.getCell(k).getDateCellValue();
+                                //System.out.println(StringUtils.isBlank(xssfRow.getCell(k).getDateCellValue().toString()));
+                                xssfRow.getCell(k).setCellType(CellType.NUMERIC);
+                                Date d = xssfRow.getCell(k)==null?null:xssfRow.getCell(k).getDateCellValue();
+
+                                if(null == d){
+                                    continue;
+                                }
                                 String format = sdf.format(d);
+                                System.out.println(format);
                                 jiFenExcel.setQuestionTime(format);
                             } else if (k == 7) {
                                 jiFenExcel.setCauses(data);
