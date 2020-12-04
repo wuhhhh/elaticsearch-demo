@@ -55,7 +55,6 @@ public class ExcelServiceImpl extends ServiceImpl<ExcelMapper, ExcelEntity> impl
             ExcelReader read = excelReader.read(readSheet1);
             Map<String, List<ExcelEntity>> map = listener.getMap();
             for (List<ExcelEntity> excelEntities : map.values()) {
-
                 for (ExcelEntity excelEntity : excelEntities) {
                     System.out.println("\n" + excelEntity + "\n");
                     res = excelMapper.insert(excelEntity);
